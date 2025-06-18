@@ -8,15 +8,14 @@
 - [Introduction](#introduction)
 - [Directory Structure](#directory-structure)
 - [Expected Use Case Model](#expected-use-case-model)
-- [Tools Required](#tools-required)
+- [Supported Services](#supported-services)
 - [API Documentation](#api-documentation)
 - [License](#license)
-- [Contributing](#contributing)
 - [Contact](#contact)
 
 ## Introduction
 
-**Energy Firmware Services** is a collection of software modules frequently used in energy firmware development. These modules are written as hardware-agnostic with dependency injection 
+**Energy Firmware Services** is a collection of software modules frequently used in energy firmware development. These modules are written as hardware-agnostic with dependency injection
 
 ## Directory Structure
 
@@ -45,7 +44,7 @@ The following services are included in this repository, each with specific featu
 | **NVM** | Support for MB85RS FRAM device |
 | **CLI** | Support for simple command line interface (CLI) |
 
-Refer to [energy-ade9178-example](https://github.com/analogdevicesinc/energy-metrology-example) for example on how to use these services
+Refer to [energy-ade9178-example](https://github.com/analogdevicesinc/energy-ade9178-example) for example on how to use these services
 
 ---
 
@@ -61,6 +60,7 @@ Use the following command from documentation folder to generate the documentatio
 ```sh
 doxygen empes_doxy_config
 ```
+The documentation will be generated in the output directory specified in the Doxygen configuration.
 
 ## License
 

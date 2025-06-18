@@ -3,8 +3,9 @@
 ******************************************************************************/
 
 /**
- * @file     adi_crc_simul.c
- * @brief    This file contains the dummy routines for hardware CRC
+ * @file     adi_crc.c
+ * @brief    This file contains the implementation of setting CRC configuration, calculating CRC,
+ *           getting CRC value, and resetting the CRC module.
  * @{
  */
 
