@@ -17,6 +17,7 @@ endif()
 
 target_sources(nvm INTERFACE
 	${CMAKE_CURRENT_LIST_DIR}/source/adi_nvm.c
+	${CMAKE_CURRENT_LIST_DIR}/source/nvm_common.c
 	${NVM_SRC}
 )
 

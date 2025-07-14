@@ -46,14 +46,34 @@ extern "C" {
  * @{
  */
 
+/** Number of bytes for CRC addition*/
+#define NUM_CRC_BYTES 2
+
+/**
+ * NVM configurations
+ */
+typedef enum
+{
+    /** Write command */
+    ADI_NVM_WRITE,
+    /** Read command */
+    ADI_NVM_READ,
+    /** Erase command */
+    ADI_NVM_ERASE,
+} ADI_NVM_CMD;
+
 /** A device handle used in all API functions to identify the instance.
  *  It is obtained from the Create API. */
 typedef void *ADI_NVM_HANDLE;
 
 /** Function pointer definition for transmission */
-typedef int32_t (*ADI_NVM_TX_FUNC)(void *, uint8_t *, uint32_t);
+typedef int32_t (*ADI_NVM_WRITE_FUNC)(void *, uint8_t *, uint32_t);
 /** Function pointer definition for receive */
-typedef int32_t (*ADI_NVM_TXRX_FUNC)(void *, uint8_t *, uint32_t, uint32_t, uint8_t *);
+typedef int32_t (*ADI_NVM_READ_FUNC)(void *, uint8_t *, uint32_t, uint8_t *);
+/** Function pointer definition for erasing NVM */
+typedef int32_t (*ADI_NVM_ERASE_FUNC)(void *, uint32_t);
+/** Function pointer definition for suspend */
+typedef uint16_t (*ADI_NVM_CRC_FUNC)(void *, uint8_t *, uint32_t);
 
 /**
  * NVM configurations
@@ -61,9 +81,13 @@ typedef int32_t (*ADI_NVM_TXRX_FUNC)(void *, uint8_t *, uint32_t, uint32_t, uint
 typedef struct
 {
     /** Function Pointer to start transmission */
-    ADI_NVM_TX_FUNC pfStartTx;
+    ADI_NVM_WRITE_FUNC pfWrite;
     /** Function Pointer to start transmission and get response */
-    ADI_NVM_TXRX_FUNC pfStartTxRx;
+    ADI_NVM_READ_FUNC pfRead;
+    /** Function Pointer to calculate the CRC for the command packet*/
+    ADI_NVM_CRC_FUNC pfCalculateCrc;
+    /** Function Pointer to erase the NVM */
+    ADI_NVM_ERASE_FUNC pfErase;
     /** user handle*/
     void *hUser;
 
@@ -205,14 +229,13 @@ ADI_NVM_STATUS adi_nvm_ReadBlock(ADI_NVM_HANDLE hNvm, uint32_t addr,
  *
  * @param[in] hNvm      -  	NVM handle
  * @param[in]  addr     -	  address to where data to be written
- * @param[in]  numBytes  -  number of bytes to write
  *
  * @return  #ADI_NVM_STATUS_SUCCESS\n
  * #ADI_NVM_STATUS_NULL_PTR \n
  * #ADI_NVM_STATUS_INVALID_MEMORY \n
  * #ADI_NVM_STATUS_COMM_ERROR
  */
-ADI_NVM_STATUS adi_nvm_Erase(ADI_NVM_HANDLE hNvm, uint32_t addr, uint32_t numBytes);
+ADI_NVM_STATUS adi_nvm_Erase(ADI_NVM_HANDLE hNvm, uint32_t addr);
 
 /**
  *  @brief Erases block of data in the FRAM by corrupting CRC. This API finds the CRC position based

@@ -8,9 +8,7 @@
  * @{
  */
 
-#include "adi_crc_ccitt16.h"
 #include "adi_nvm_private.h"
-#include "app_cfg.h"
 #include "board_cfg.h"
 #include "nvm_device.h"
 #include <stdint.h>
@@ -18,15 +16,41 @@
 
 /** Number of bytes for the header to be included (addr + cmd) to send data to FRAM */
 #define MB85RS_HEADER_NUM_BYTES 4
-/** Number of bytes for CRC addition*/
-#define MB85RS_CRC_NUM_BYTES 2
-/** Number of bytes to be included (addr + cmd) with header and CRC to send data to FRAM */
-#define MB85RS_NUM_BYTES MB85RS_HEADER_NUM_BYTES + MB85RS_CRC_NUM_BYTES
 /** Total size of the non-volatile memory */
 #define NVM_MB85RS_SIZE 262144
 
+/**
+ * @brief Sends a command to the FRAM device and gets the response.
+ * @param[in] pInfo 		- NVM service handle
+ * @param[in] cmd - command to be sent to the FRAM device
+ * @param[in] numBytes - number of bytes to read from the FRAM device
+ * @param[in] pData - Pointer to data.
+ * @return  #ADI_NVM_STATUS_SUCCESS\n
+ * #ADI_NVM_STATUS_NULL_PTR \n
+ * #ADI_NVM_STATUS_INVALID_PRODUCT_ID \n
+ * #ADI_NVM_STATUS_COMM_ERROR
+ */
 static ADI_NVM_STATUS NvmSendCmdGetResponse(ADI_NVM_INFO *pInfo, uint8_t cmd, uint32_t numBytes,
                                             uint8_t *pData);
+/**
+ * @brief Erases the non volatile memory device
+ * @param[in] pInfo 		- pointer to NVM data
+ * @param[in] addr     	- address to where data to be erased
+ * @param[in] numBytes  - number of bytes to erase
+ *
+ * @return  #ADI_NVM_STATUS_SUCCESS\n
+ * #ADI_NVM_STATUS_INVALID_NUM_REGISTERS \n
+ */
+static ADI_NVM_STATUS NvmErase(void *pInfo, uint32_t addr);
+
+/**
+ * @brief Format the non volatile memory device
+ * @param[in] pFormat - pointer to the device format structure
+ * @param[in] pDst - pointer to the data to be sent
+ *
+ */
+static uint32_t NvmFormat(void *pFormat, uint8_t *pDst);
+
 /**
  * @brief List of FRAM Op-Code
  */
@@ -43,13 +67,7 @@ typedef enum
     MB58RS_SLEEP = 0xb9 /*! @brief Sleep mode. */
 } MB58RS_CMD;
 
-// this api is not used for fram
-void NVMFormat(ADI_NVM_INFO *pInfo)
-{
-    (void)pInfo;
-}
-
-ADI_NVM_STATUS NvmInit(ADI_NVM_INFO *pInfo)
+ADI_NVM_STATUS NvmDeviceInit(ADI_NVM_INFO *pInfo)
 {
     ADI_NVM_STATUS status = ADI_NVM_STATUS_COMM_ERROR;
     uint8_t dummyData = 0;
@@ -66,133 +84,10 @@ ADI_NVM_STATUS NvmInit(ADI_NVM_INFO *pInfo)
         {
             status = NvmSendCmdGetResponse(pInfo, MB58RS_WREN, 0, &dummyData);
         }
-    }
-    return status;
-}
-
-ADI_NVM_STATUS NvmWrite(ADI_NVM_INFO *pInfo, uint8_t *pData, uint32_t addr, uint32_t numBytes)
-{
-    ADI_NVM_STATUS status = ADI_NVM_STATUS_SUCCESS;
-    uint32_t bytesRemain;
-    uint32_t offset = 0;
-    uint32_t chunkSize;
-    uint32_t numBytesToSend;
-    uint16_t crc;
-    uint32_t maxChunkData = ADI_NVM_MAX_SIZE - 6;
-
-    if (numBytes == 0)
-    {
-        return ADI_NVM_STATUS_INVALID_NUM_REGISTERS;
-    }
-    else if (numBytes > (NVM_MB85RS_SIZE - MB85RS_NUM_BYTES))
-    {
-        return ADI_NVM_STATUS_INVALID_NUM_REGISTERS;
-    }
-    bytesRemain = numBytes;
-    // Calculate CRC for the entire data to be written
-    crc = adi_crc_CalculateCCITT16(pData, (uint16_t)numBytes);
-    // If the numBytes is greater than the maximum chunk size, split the write into chunks and for
-    // the last chunk data add CRC bytes.
-    while (bytesRemain > 0)
-    {
-        chunkSize = (bytesRemain > maxChunkData) ? maxChunkData : bytesRemain;
-        pInfo->txData[0] = MB58RS_WRITE;
-        pInfo->txData[1] = (uint8_t)((addr + offset) >> 16);
-        pInfo->txData[2] = (uint8_t)((addr + offset) >> 8);
-        pInfo->txData[3] = (uint8_t)(addr + offset);
-        memcpy(&pInfo->txData[MB85RS_HEADER_NUM_BYTES], &pData[offset], chunkSize);
-        numBytesToSend = chunkSize + MB85RS_HEADER_NUM_BYTES;
-        // For the last chunk, add CRC bytes
-        if (bytesRemain == chunkSize)
-        {
-            pInfo->txData[MB85RS_HEADER_NUM_BYTES + chunkSize] = (uint8_t)(crc >> 8);
-            pInfo->txData[MB85RS_HEADER_NUM_BYTES + chunkSize + 1] = (uint8_t)(crc & 0xFF);
-            numBytesToSend += MB85RS_CRC_NUM_BYTES;
-        }
-        status = pInfo->config.pfStartTx(pInfo->config.hUser, &pInfo->txData[0], numBytesToSend);
-        if (status != 0)
-        {
-            status = ADI_NVM_STATUS_COMM_ERROR;
-            break;
-        }
-        offset += chunkSize;
-        bytesRemain -= chunkSize;
-    }
-
-    return status;
-}
-
-ADI_NVM_STATUS NvmRead(ADI_NVM_INFO *pInfo, uint32_t addr, uint32_t numBytes, uint8_t *pData)
-{
-    ADI_NVM_STATUS status = ADI_NVM_STATUS_COMM_ERROR;
-    uint32_t numBytesToSend;
-    uint32_t bytesRemain;
-    uint32_t offset = 0;
-    uint32_t maxChunkData = ADI_NVM_MAX_SIZE - 6;
-    uint32_t chunkSize;
-    uint16_t crc;
-    uint16_t expectedCrc;
-    if (numBytes == 0)
-    {
-        return ADI_NVM_STATUS_INVALID_NUM_REGISTERS;
-    }
-    else if (numBytes > (NVM_MB85RS_SIZE - MB85RS_NUM_BYTES))
-    {
-        return ADI_NVM_STATUS_INVALID_NUM_REGISTERS;
-    }
-    else
-    {
-        // If the numBytes is greater than the maximum chunk size, split the read into chunks and
-        // for the last chunk data expect CRC bytes.
-        bytesRemain = numBytes;
-        while (bytesRemain > 0)
-        {
-            chunkSize = (bytesRemain > maxChunkData) ? maxChunkData : bytesRemain;
-            pInfo->txData[0] = MB58RS_READ;
-            pInfo->txData[1] = (uint8_t)((addr + offset) >> 16);
-            pInfo->txData[2] = (uint8_t)((addr + offset) >> 8);
-            pInfo->txData[3] = (uint8_t)(addr + offset);
-
-            // For the last chunk, verify CRC.
-            numBytesToSend = chunkSize + MB85RS_HEADER_NUM_BYTES;
-            if (bytesRemain == chunkSize)
-            {
-                numBytesToSend += MB85RS_CRC_NUM_BYTES;
-            }
-            status =
-                pInfo->config.pfStartTxRx(pInfo->config.hUser, &pInfo->txData[0], numBytesToSend,
-                                          APP_CFG_TIMEOUT_COUNT, &pInfo->rxData[0]);
-            if (status == ADI_NVM_STATUS_SUCCESS)
-            {
-                if (bytesRemain == chunkSize)
-                {
-                    memcpy(&pInfo->tempBuffer[0], &pData[offset], chunkSize);
-                    memcpy(&pData[offset], &pInfo->rxData[4], chunkSize);
-                    crc = adi_crc_CalculateCCITT16(pData, numBytes);
-                    expectedCrc = pInfo->rxData[4 + chunkSize] << 8 | pInfo->rxData[5 + chunkSize];
-                    if (crc != expectedCrc)
-                    {
-                        // retrieve the orginal content if the CRC is mismatched.
-                        memcpy(&pData[offset], &pInfo->tempBuffer[0], chunkSize);
-                        status = ADI_NVM_STATUS_CRC_MISMATCH;
-                        break;
-                    }
-                }
-                else
-                {
-                    // Not last chunk: just copy data
-                    memcpy(&pData[offset], &pInfo->rxData[4], chunkSize);
-                }
-            }
-            else
-            {
-                status = ADI_NVM_STATUS_COMM_ERROR;
-                break;
-            }
-
-            offset += chunkSize;
-            bytesRemain -= chunkSize;
-        }
+        pInfo->pfFormat = NvmFormat;
+        pInfo->pfEraseFn = NvmErase;
+        pInfo->maxNumBytes = NVM_MB85RS_SIZE - MB85RS_HEADER_NUM_BYTES - NUM_CRC_BYTES;
+        pInfo->rxOffset = MB85RS_HEADER_NUM_BYTES;
     }
     return status;
 }
@@ -204,8 +99,8 @@ ADI_NVM_STATUS NvmSendCmdGetResponse(ADI_NVM_INFO *pInfo, uint8_t cmd, uint32_t 
     uint32_t numBytesToSend;
     pInfo->txData[0] = cmd;
     numBytesToSend = 1 + numBytes;
-    status = pInfo->config.pfStartTxRx(pInfo->config.hUser, &pInfo->txData[0], numBytesToSend,
-                                       APP_CFG_TIMEOUT_COUNT, &pInfo->rxData[0]);
+    status = pInfo->config.pfRead(pInfo->config.hUser, &pInfo->txData[0], numBytesToSend,
+                                  &pInfo->rxData[0]);
     if (status == ADI_NVM_STATUS_SUCCESS)
     {
         memcpy(pData, &pInfo->rxData[1], numBytes);
@@ -215,6 +110,50 @@ ADI_NVM_STATUS NvmSendCmdGetResponse(ADI_NVM_INFO *pInfo, uint8_t cmd, uint32_t 
         status = ADI_NVM_STATUS_COMM_ERROR;
     }
     return status;
+}
+
+ADI_NVM_STATUS NvmErase(void *pNvmInfo, uint32_t addr)
+{
+    ADI_NVM_STATUS nvmStatus = ADI_NVM_STATUS_SUCCESS;
+    ADI_NVM_INFO *pInfo = (ADI_NVM_INFO *)pNvmInfo;
+
+    if (pInfo == NULL)
+    {
+        nvmStatus = ADI_NVM_STATUS_NULL_PTR;
+    }
+    else
+    {
+        memset(&pInfo->eraseData[0], 0xff, NUM_CRC_BYTES);
+        NvmWrite(pInfo, &pInfo->eraseData[0], addr, NUM_CRC_BYTES);
+    }
+
+    return nvmStatus;
+}
+
+uint32_t NvmFormat(void *pFormat, uint8_t *pDst)
+{
+    uint8_t cmd = 0;
+    NvmDeviceCmdFormat *pFramFormat = (NvmDeviceCmdFormat *)pFormat;
+    switch (pFramFormat->cmd)
+    {
+    case ADI_NVM_WRITE:
+        cmd = MB58RS_WRITE;
+        break;
+    case ADI_NVM_READ:
+        cmd = MB58RS_READ;
+        break;
+    case ADI_NVM_ERASE:
+        cmd = MB58RS_WRITE;
+    default:
+        // Handle other cases or error
+        break;
+    }
+    // Refer to the MB85RS datasheet for command format.
+    pDst[0] = cmd;
+    pDst[1] = (uint8_t)((pFramFormat->addr + pFramFormat->offset) >> 16);
+    pDst[2] = (uint8_t)((pFramFormat->addr + pFramFormat->offset) >> 8);
+    pDst[3] = (uint8_t)((pFramFormat->addr + pFramFormat->offset));
+    return MB85RS_HEADER_NUM_BYTES;
 }
 
 /**
