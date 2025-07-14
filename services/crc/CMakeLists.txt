@@ -4,8 +4,6 @@ project(crc C)
 
 add_library(crc INTERFACE)
 
-# Enable CMake support for ASM and C languages
-enable_language(C ASM)
 
 target_sources(crc INTERFACE
 	${CMAKE_CURRENT_LIST_DIR}/source/adi_crc.c
