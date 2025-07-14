@@ -36,7 +36,6 @@
 The following services are included in this repository, each with specific features:
 | Service | Features |
 |---------|----------|
-| **CRC** | Supports 8-bit, 16-bit, and 32-bit CRC calculations  ||
 | **NVM** | Support for MB85RS FRAM device |
 | **CLI** | Support for simple command line interface (CLI) |
 
