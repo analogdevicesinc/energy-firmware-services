@@ -27,8 +27,12 @@ extern "C" {
 /** @brief rx buffer size */
 #define RX_BUFFER_SIZE 256
 
-/** Maximum buffer size to store the CLI data */
-#define MAX_CLI_MSG_STORAGE_SIZE 1024
+/** @brief Maximum size (in bytes) for CLI buffer */
+#define ADI_CLI_MAX_SIZE (1024 * 10)
+
+/** @brief Maximum size (in bytes) for a message block */
+#define ADI_CLI_MAX_MSG_SIZE 512
+
 /**
  * CLI data structure for storing UART Receive output data
  */
@@ -54,9 +58,13 @@ typedef struct
     /** history data */
     CLI_HISTORY_DATA cliHistData;
     /** ping buffer for the data transmission */
-    uint8_t cliBuffer0[MAX_CLI_MSG_STORAGE_SIZE];
+    uint8_t cliBuffer0[ADI_CLI_MAX_SIZE];
     /** pong buffer for the data transmission */
-    uint8_t cliBuffer1[MAX_CLI_MSG_STORAGE_SIZE];
+    uint8_t cliBuffer1[ADI_CLI_MAX_SIZE];
+    /** pointer to the message string */
+    char *pMsgString;
+    /** pointer to the message string to copy */
+    char *pMsgStringToCopy;
     /** pointer to the current data buffer filling */
     uint8_t *pBufferToWrite;
     /** CLI data */

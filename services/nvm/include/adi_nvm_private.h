@@ -23,6 +23,12 @@ extern "C" {
 
 /** Maximum size of buffer to store */
 #define ADI_NVM_MAX_SIZE 512
+
+/** Function pointer type for formatting data to be sent to the NVM device (internal use). */
+typedef uint32_t (*NvmFormatFunc)(void *, uint8_t *);
+/** Function pointer type for the internal erase function called by the erase API. */
+typedef ADI_NVM_STATUS (*NvmEraseFunc)(void *, uint32_t);
+
 /**
  * NVM info
  */
@@ -30,6 +36,12 @@ typedef struct
 {
     /** NVM configuration*/
     ADI_NVM_CONFIG config;
+    /** Function pointer to the device-specific internal function to be called. */
+    NvmFormatFunc pfFormat;
+    /** Function pointer to the device-specific internal function to be called. */
+    NvmEraseFunc pfEraseFn;
+    /** Maximum number of bytes the function can write to NVM device. */
+    uint32_t maxNumBytes;
     /** Tx Data to be sent */
     uint8_t txData[ADI_NVM_MAX_SIZE];
     /** Rx data received */
@@ -37,9 +49,13 @@ typedef struct
     /** temporary buffer. */
     uint8_t tempBuffer[ADI_NVM_MAX_SIZE];
     /** buffer to be filled with 0xFF to erase contents in FRAM */
-    uint8_t eraseData[ADI_NVM_MAX_SIZE];
+    uint8_t eraseData[NUM_CRC_BYTES];
     /** product id of device */
     uint32_t productId;
+    /** command to indicate the erase */
+    uint8_t isErase;
+    /** Offset in the rxData buffer where the data starts */
+    uint16_t rxOffset;
 } ADI_NVM_INFO;
 
 #ifdef __cplusplus

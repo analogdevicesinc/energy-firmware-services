@@ -18,23 +18,35 @@ extern "C" {
 
 #include "adi_nvm_private.h"
 #include "adi_nvm_status.h"
-#include "nvm_device.h"
 #include <stdint.h>
 
 /**
- *  @brief Format the non volatile memory device
- *
+ * @brief Structure representing NVM device command format
  */
-void NVMFormat(ADI_NVM_INFO *pInfo);
+typedef struct
+{
+    /** Command opcode */
+    uint8_t cmd;
+    /** address */
+    uint32_t addr;
+    /** offset */
+    uint32_t offset;
+} NvmDeviceCmdFormat;
 
 /**
  * @brief Initializes NVM Service.
  * @param[in] pInfo 		- pointer to NVM data
- * @return  #ADI_NVM_STATUS_SUCCESS\n
- * #ADI_NVM_STATUS_INVALID_PRODUCT_ID \n
- * #ADI_NVM_STATUS_COMM_ERROR
  */
 ADI_NVM_STATUS NvmInit(ADI_NVM_INFO *pInfo);
+
+/**
+ *  @brief Initializes device-specific parameters, such as assigning internal function pointers for
+ * NVM format and erase operations.
+ *
+ *  @param[in] pInfo 		- pointer to NVM data
+ *
+ */
+ADI_NVM_STATUS NvmDeviceInit(ADI_NVM_INFO *pInfo);
 
 /**
  *  @brief Performs a write operation in the non volatile memory device

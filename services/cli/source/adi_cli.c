@@ -18,6 +18,7 @@
 #include "cli_interface.h"
 #include "cli_utils.h"
 #include "string.h"
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -27,13 +28,9 @@
 static void InitCircBuff(void);
 
 static ADI_CLI_HANDLE hCli;
-
-/** Maximum buffer size to store the CLI data */
-#define MAX_CLI_MSG_STORAGE_SIZE 1024
-/** Buffer to write and store the message */
-static int32_t CliFlushMessages(void);
 static void SetTempMem(ADI_CLI_INFO *pInfo);
 static void IntialiseStateData(ADI_CLI_INFO *pInfo);
+static int32_t CopyToBuffer(char *pMessage);
 
 int32_t adi_cli_GetNumCharsWaiting(void)
 {
@@ -112,6 +109,9 @@ static void SetTempMem(ADI_CLI_INFO *pInfo)
         (char *)&pInfo->pTempMemory[3 * APP_CFG_CLI_MAX_CMD_LENGTH];
     pInfo->cliIfData.pCliTrimString = (char *)&pInfo->pTempMemory[4 * APP_CFG_CLI_MAX_CMD_LENGTH];
     pInfo->cliIfData.pCliPrintString = (char *)&pInfo->pTempMemory[5 * APP_CFG_CLI_MAX_CMD_LENGTH];
+    pInfo->pMsgString = (char *)&pInfo->pTempMemory[6 * APP_CFG_CLI_MAX_CMD_LENGTH];
+    pInfo->pMsgStringToCopy =
+        (char *)&pInfo->pTempMemory[(7 * APP_CFG_CLI_MAX_CMD_LENGTH) + ADI_CLI_MAX_MSG_SIZE];
 }
 
 ADI_CLI_INFO *GetCliInfo(void)
@@ -142,8 +142,6 @@ ADI_CLI_STATUS adi_cli_Init(ADI_CLI_CONFIG *pConfig)
             cliStatus = ADI_CLI_STATUS_COMM_ERROR;
         }
         CliInit();
-        CliFlushMessages();
-        adi_cli_DisplayPrompt();
     }
 
     return cliStatus;
@@ -153,7 +151,6 @@ int32_t adi_cli_Interface(void)
 {
     int32_t status = 0;
     status = CliInterface();
-    CliFlushMessages();
     return status;
 }
 
@@ -290,7 +287,7 @@ static void InitCircBuff(void)
  * @brief Flush the messages stored in the CLI Buffer
  * @return 0 if the buffer is empty, 1 if the buffer is not empty.
  */
-int32_t CliFlushMessages(void)
+int32_t adi_cli_FlushMessages(void)
 {
     int32_t status = 0;
     static int32_t bufId = 0;
@@ -318,6 +315,78 @@ int32_t CliFlushMessages(void)
         status = 1;
     }
     return status;
+}
+
+/**
+ * @details Prints message
+ */
+// added this to avoid warning format sring is not a literal.
+__attribute__((__format__(__printf__, 2, 0))) int32_t adi_cli_PrintMessage(char *pMsgType,
+                                                                           char *pFormat, ...)
+{
+    ADI_CLI_INFO *pInfo = (ADI_CLI_INFO *)hCli;
+    int32_t status = 0;
+    int32_t ret = 0;
+    va_list pArgs;
+    va_start(pArgs, pFormat);
+    vsnprintf(pInfo->pMsgString, ADI_CLI_MAX_MSG_SIZE, pFormat, pArgs);
+
+    if ((strcmp(pMsgType, "RAW") == 0) || (strcmp(pMsgType, "DBGRAW") == 0))
+    {
+        va_end(pArgs);
+        /* Just print the message as such*/
+        status = CopyToBuffer(pInfo->pMsgString);
+    }
+    else
+    {
+        ret = snprintf(pInfo->pMsgStringToCopy, ADI_CLI_MAX_MSG_SIZE, "%s\n\r", pInfo->pMsgString);
+        va_end(pArgs);
+        if (ret >= 0)
+        {
+
+            CopyToBuffer(pMsgType);
+            status = CopyToBuffer(pInfo->pMsgStringToCopy);
+        }
+        else
+        {
+            status = 1;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * @details Copy pMessage into message buffer
+ * @param[in] pMessage - pointer to pMessage buffer.
+ * @return[in] status - 0 on Success, 1 on Failure
+ */
+int32_t CopyToBuffer(char *pMessage)
+{
+    ADI_CLI_INFO *pInfo = (ADI_CLI_INFO *)hCli;
+    int32_t space = (int32_t)(ADI_CLI_MAX_SIZE - pInfo->cliBytesStored - 1);
+    int32_t bytesToWrite = (int32_t)strlen(pMessage);
+    int32_t status = 0;
+
+    if (space >= bytesToWrite)
+    {
+        memcpy(&pInfo->pBufferToWrite[pInfo->cliBytesStored], pMessage, (size_t)bytesToWrite);
+        pInfo->cliBytesStored += (uint32_t)bytesToWrite;
+    }
+    else
+    {
+        status = 1;
+    }
+
+    return status;
+}
+
+uint32_t adi_cli_GetFreeMessageSpace(void)
+{
+    ADI_CLI_INFO *pInfo = (ADI_CLI_INFO *)hCli;
+    uint32_t freeSpace;
+    freeSpace = ADI_CLI_MAX_SIZE - pInfo->cliBytesStored;
+    return freeSpace;
 }
 
 /**

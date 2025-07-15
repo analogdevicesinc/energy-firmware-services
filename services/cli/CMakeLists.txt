@@ -4,17 +4,7 @@ project(cli C)
 
 add_library(cli INTERFACE)
 
-# Enable CMake support for ASM and C languages
-enable_language(C ASM)
-
 option(USE_IIO "Compile IIO board_support sources" OFF)
-
-# Add project symbols (macros)
-target_compile_definitions(cli INTERFACE
-	USE_HAL_DRIVER
-	$<$<CONFIG:Debug>:DEBUG>
-)
-include(CMakePrintHelpers)
 
 set (SOURCES
 	${CMAKE_CURRENT_LIST_DIR}/source/adi_cli.c

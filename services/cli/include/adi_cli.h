@@ -36,6 +36,7 @@
 #include "adi_circ_buf.h"
 #include "adi_cli_status.h"
 #include "cli_dispatch.h"
+#include <stdarg.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -80,6 +81,27 @@ typedef struct
     void *hUser;
 
 } ADI_CLI_CONFIG;
+
+/** Prints Info  Message as such without new line */
+#define INFO_MSG_RAW(...) adi_cli_PrintMessage("RAW", __VA_ARGS__);
+/** Prints Info  Message */
+#define INFO_MSG(...) adi_cli_PrintMessage("", __VA_ARGS__);
+/** Prints warn message */
+#define WARN_MSG(...) adi_cli_PrintMessage("Warn : ", __VA_ARGS__);
+/** Prints error message */
+#define ERROR_MSG(...) adi_cli_PrintMessage("Error : ", __VA_ARGS__);
+/** Prints debug message */
+#ifdef ENABLE_DEBUG
+#define DEBUG_MSG(...) adi_cli_PrintMessage("Debug : ", __VA_ARGS__);
+#else
+#define DEBUG_MSG(...)
+#endif
+/** Prints debug message as such without new line */
+#ifdef ENABLE_DEBUG
+#define DEBUG_MSG_RAW(...) adi_cli_PrintMessage("DBGRAW", __VA_ARGS__);
+#else
+#define DEBUG_MSG_RAW(...) NULL
+#endif
 
 /** @} */
 
@@ -202,6 +224,30 @@ void adi_cli_TxCallback(void);
  * @return Number of bytes pending in the receive buffer.
  */
 int32_t adi_cli_GetNumCharsWaiting(void);
+
+/**
+ * @details Stores the CLI message in the buffer.
+ * @param[in] pMsgType - Type of message to be printed
+ * @param[in] pFormat  - Format specifier for the message
+ * @return status      - SUCCESS - 0
+ *                     - FAILURE - 1
+ */
+int32_t adi_cli_PrintMessage(char *pMsgType, char *pFormat, ...);
+
+/**
+ * @brief Flushes the CLI message buffer.
+ * @details This function clears the message buffer, allowing new messages to be added.
+ * @return 0 if the buffer is empty, 1 if the buffer is not empty.
+ *
+ */
+int32_t adi_cli_FlushMessages(void);
+
+/**
+ * @brief Returns the number of bytes available in the CLI message buffer.
+ * @return Number of bytes available in the CLI message buffer.
+ *
+ */
+uint32_t adi_cli_GetFreeMessageSpace(void);
 
 /** @} */
 

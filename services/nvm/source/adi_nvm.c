@@ -56,7 +56,7 @@ ADI_NVM_STATUS adi_nvm_Init(ADI_NVM_HANDLE hNvm, ADI_NVM_CONFIG *pConfig)
     else
     {
         pInfo->config = *pConfig;
-        status = NvmInit(pInfo);
+        NvmInit(pInfo);
     }
     return status;
 }
@@ -168,7 +168,7 @@ ADI_NVM_STATUS adi_nvm_ReadBlock(ADI_NVM_HANDLE hNvm, uint32_t addr, ADI_NVM_BLO
     return status;
 }
 
-ADI_NVM_STATUS adi_nvm_Erase(ADI_NVM_HANDLE hNvm, uint32_t addr, uint32_t numBytes)
+ADI_NVM_STATUS adi_nvm_Erase(ADI_NVM_HANDLE hNvm, uint32_t addr)
 {
     ADI_NVM_STATUS status = ADI_NVM_STATUS_SUCCESS;
     ADI_NVM_INFO *pInfo = (ADI_NVM_INFO *)hNvm;
@@ -178,8 +178,7 @@ ADI_NVM_STATUS adi_nvm_Erase(ADI_NVM_HANDLE hNvm, uint32_t addr, uint32_t numByt
     }
     else
     {
-        memset(&pInfo->eraseData[0], 0xff, numBytes);
-        status = NvmWrite(pInfo, &pInfo->eraseData[0], addr, numBytes);
+        status = pInfo->pfEraseFn(pInfo, addr);
     }
     return status;
 }
@@ -196,6 +195,7 @@ ADI_NVM_STATUS adi_nvm_EraseBlock(ADI_NVM_HANDLE hNvm, uint32_t addr,
     }
     else
     {
+        pInfo->isErase = 1;
         // Corrupt the CRC in NVM starting from the given address in a contiguous memory region.
         // For each block, the address determined by the number of  bytes present and the size of
         // the CRC (ADI_NVM_NUM_BYTES_CRC).
@@ -203,13 +203,14 @@ ADI_NVM_STATUS adi_nvm_EraseBlock(ADI_NVM_HANDLE hNvm, uint32_t addr,
         for (j = 0; j < pBlockData->numBlocks; j++)
         {
             addr += pBlockData->numBytes;
-            status = NvmWrite(pInfo, &pInfo->eraseData[0], addr, ADI_NVM_NUM_BYTES_CRC);
+            status = pInfo->pfEraseFn(pInfo, addr);
             if (status != ADI_NVM_STATUS_SUCCESS)
             {
                 break;
             }
             addr += ADI_NVM_NUM_BYTES_CRC;
         }
+        pInfo->isErase = 0;
     }
     return status;
 }
