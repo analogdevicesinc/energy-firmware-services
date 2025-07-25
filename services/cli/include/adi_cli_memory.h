@@ -25,7 +25,7 @@ extern "C" {
 #define ADI_CLI_STATE_MEM_NUM_BYTES sizeof(ADI_CLI_INFO)
 /** Temporary memory required in bytes for the CLI service. Allocate a buffer aligned
  * to 32 bit boundary */
-#define ADI_CLI_TEMP_MEM_NUM_BYTES 0x1000
+#define ADI_CLI_TEMP_MEM_NUM_BYTES 0x2000
 
 /** @} */
 #ifdef __cplusplus
