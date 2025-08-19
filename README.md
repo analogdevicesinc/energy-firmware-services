@@ -7,7 +7,6 @@
 
 - [Introduction](#introduction)
 - [Directory Structure](#directory-structure)
-- [Expected Use Case Model](#expected-use-case-model)
 - [Supported Services](#supported-services)
 - [API Documentation](#api-documentation)
 - [License](#license)
