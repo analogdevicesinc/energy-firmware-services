@@ -67,32 +67,33 @@ typedef struct
 
 /**
  * @brief Add a command line to the head of history list.
+ * @param[in] pHistory	- pointer to the history data
  * @param[in] pCommand	- pointer to a command
  * @return status 0 on Success
  */
-int32_t HistoryAppend(const char *pCommand);
+int32_t HistoryAppend(CLI_HISTORY_DATA *pHistory, const char *pCommand);
 
 /**
  * @brief Initialize the history list.
  */
-void HistoryInit(void);
+void HistoryInit(CLI_HISTORY_DATA *pHistory);
 
 /**
  * @brief Get a command line from the history file, moving up.
  * @return a command pointer
  */
-char *HistoryScrollUp(void);
+char *HistoryScrollUp(CLI_HISTORY_DATA *pHistory);
 
 /**
  * @brief Get a command line from the history file, moving down.
  * @return a command pointer
  **/
-char *HistroyScrollDown(void);
+char *HistoryScrollDown(CLI_HISTORY_DATA *pHistory);
 
 /**
  * @brief flush out history
  */
-void HistoryFlush(void);
+void HistoryFlush(CLI_HISTORY_DATA *pHistory);
 
 #ifdef __cplusplus
 }

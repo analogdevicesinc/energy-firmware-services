@@ -10,8 +10,8 @@ set (SOURCES
 	${CMAKE_CURRENT_LIST_DIR}/source/adi_cli.c
 	${CMAKE_CURRENT_LIST_DIR}/source/cli_dispatch.c
 	${CMAKE_CURRENT_LIST_DIR}/source/cli_history.c
-	${CMAKE_CURRENT_LIST_DIR}/source/cli_interface.c
-	${CMAKE_CURRENT_LIST_DIR}/source/cli_utils.c
+	${CMAKE_CURRENT_LIST_DIR}/source/cli_private.c
+	${CMAKE_CURRENT_LIST_DIR}/source/adi_cli_utility.c
 )
 
 if(USE_IIO)
