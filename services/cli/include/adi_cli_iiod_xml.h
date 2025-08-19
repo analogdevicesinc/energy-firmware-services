@@ -93,6 +93,23 @@ typedef enum
 } ATTRIBUTE_SHARED;
 
 /**
+ * Enum holding the datatype of the attribute
+ */
+typedef enum
+{
+    /** Attribute type is int32_t */
+    ADI_ATTR_TYPE_INT32 = 0,
+    /** Attribute type is uint32_t */
+    ADI_TYPE_UINT32,
+    /** Attribute type is float */
+    ADI_ATTR_TYPE_FLOAT,
+    /** Attribute type is uint8_t */
+    ADI_ATTR_TYPE_UINT8,
+    /** Attribute type is string*/
+    ADI_ATTR_TYPE_STRING,
+} ADI_ATTR_TYPE;
+
+/**
  * @struct AttributeType
  * @brief Structure holding pointers to show and store functions.
  */
@@ -102,6 +119,8 @@ typedef struct
     const char *pName;
     /** Attribute id */
     int32_t id;
+    /** Attribute value type */
+    ADI_ATTR_TYPE dataType;
     /** Whether this attribute is shared by all channels of the same type, or direction
      * or simply by all channels. If left uninitialized, the sharedness defaults to
      * separate.

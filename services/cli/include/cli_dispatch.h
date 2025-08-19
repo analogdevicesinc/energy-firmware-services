@@ -12,13 +12,33 @@
 #ifndef __CLI_DISPATCH_H__
 #define __CLI_DISPATCH_H__
 
-#include "cli_interface.h"
+#include "app_cfg.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Holds parameter value
+ */
+typedef union
+{
+    char *pS; /**< holds string value */
+    char c;   /**< holds char type value */
+    double f; /**< holds double type value */
+    long d;   /**< holds long type value */
+} PARAM;
+
+/**
+ *  Holds a full set of parsed parameter values for passing to cli_commands
+ */
+typedef struct
+{
+    int c;                                /**< arguments count value */
+    PARAM v[APP_CFG_CLI_MAX_PARAM_COUNT]; /**< buffer to hold parameter values */
+} Args;
 
 /**
  * @brief typedef for one record of the command dispatch table
@@ -48,6 +68,30 @@ typedef struct commandData
  * @brief typedef for one record of the command dispatch table
  */
 
+typedef struct internalCommandData
+{
+    /** command name */
+    char *pName;
+    /** list of arguments-type in sequence */
+    char *pParamList;
+    /** pointer to command function*/
+    int32_t (*pfFunc)(void *, const Command *, Args *, int32_t);
+    /** flag hidden/non-hidden command */
+    bool hide;
+    /** pointer to summary of command */
+    char *pSummary;
+    /** pointer to synopsis for command */
+    char *pSynopsis;
+    /** pointer to command description*/
+    char *pDescription;
+    /** Function pointer to additional description function*/
+    void (*pfDesc)(void);
+} InternalCommand;
+
+/**
+ * @brief typedef for one record of the command dispatch table
+ */
+
 typedef struct
 {
     /** pointer to store the command in lower case */
@@ -58,6 +102,8 @@ typedef struct
     const Command *pDispatchTable;
     /** number of records in dispatch table */
     int32_t numDispatchRecords;
+    /** Holds a full set of parsed parameter values for passing to commands */
+    Args sArgs;
 
 } CLI_DISPATCH_DATA;
 
@@ -67,41 +113,16 @@ typedef struct
 #define NOHIDE false
 
 /**
- * @brief Get number of records in dispatch table.
- * \ref DispatchGetNumRecords
- * @return total number of dispatch table records.
- */
-int32_t DispatchGetNumRecords(void);
-
-/**
- * @brief Convert input as lowercase and get matching dispatch record.
- * \ref DispatchMatchCommand
- * @param[in]  pCommandToken	- parsed user command.
- * @return const Command*       - pointer to dispatch table record.
- */
-const Command *DispatchMatchCommand(const char *pCommandToken);
-
-/**
- * @brief Get handle for dispatch table.
- * \ref DispatchGetRecords
- * @return const Command*  - pointer to dispatch table record.
- */
-const Command *DispatchGetRecords(void);
-
-/**
  * @brief Get matching dispatch table record.
  * \ref DispatchGetCommandDetails
+ * @param [in] pInfo		    - pointer to dispatch data
  * @param [in] pCommandToken	- parsed user command in lowercase.
+ * @param [in] pDispatchTable	- pointer to dispatch table
+ * @param [in] numRecords	    - number of records in dispatch table
  * @return const Command*       - pointer to dispatch table record.
  */
-const Command *DispatchGetCommandDetails(char *pCommandToken);
-
-/**
- * @brief Initialize dispatch table.
- * @param [in] pRecords		- pointer to command dispatch table.
- * @param [in] numRecords	- number of records in dispatch table.
- */
-void DispatchInit(const Command *pRecords, int32_t numRecords);
+const Command *DispatchGetCommandDetails(CLI_DISPATCH_DATA *pInfo, char *pCommandToken,
+                                         const Command *pDispatchTable, int32_t numRecords);
 
 #ifdef __cplusplus
 }

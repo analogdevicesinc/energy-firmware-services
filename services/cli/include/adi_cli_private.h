@@ -18,14 +18,10 @@
 extern "C" {
 #endif
 
-#include "adi_circ_buf.h"
 #include "adi_cli.h"
 #include "cli_dispatch.h"
 #include "cli_history.h"
-#include "cli_utils.h"
-
-/** @brief rx buffer size */
-#define RX_BUFFER_SIZE 256
+#include "cli_private.h"
 
 /** @brief Maximum size (in bytes) for CLI buffer */
 #define ADI_CLI_MAX_SIZE (1024 * 10)
@@ -34,29 +30,12 @@ extern "C" {
 #define ADI_CLI_MAX_MSG_SIZE 512
 
 /**
- * CLI data structure for storing UART Receive output data
- */
-typedef struct
-{
-    /** Pointer to rx circular buffer instance */
-    volatile ADI_CIRC_BUF *pRxBuff;
-    /** byte index */
-    uint8_t rxByte;
-    /** Circular buffer for storing received data */
-    volatile ADI_CIRC_BUF rxCircBuff;
-    /** rx buffer */
-    uint8_t rxBuff[RX_BUFFER_SIZE];
-} ADI_CLI_RX_DATA;
-
-/**
  * CLI information structure
  */
 typedef struct
 {
     /** command line interface instance */
-    CLI_INTERFACE cliIfData;
-    /** history data */
-    CLI_HISTORY_DATA cliHistData;
+    CLI_PRIVATE cliIfData;
     /** ping buffer for the data transmission */
     uint8_t cliBuffer0[ADI_CLI_MAX_SIZE];
     /** pong buffer for the data transmission */
@@ -65,10 +44,6 @@ typedef struct
     char *pMsgString;
     /** pointer to the message string to copy */
     char *pMsgStringToCopy;
-    /** pointer to the current data buffer filling */
-    uint8_t *pBufferToWrite;
-    /** CLI data */
-    ADI_CLI_RX_DATA cliData;
     /** CLI configuration */
     ADI_CLI_CONFIG config;
     /** Tx completion flag */
@@ -77,20 +52,7 @@ typedef struct
     uint8_t *pTempMemory;
     /** Size of memory in (bytes) given to store temporary data */
     uint32_t tempMemSize;
-    /** pointer to the utils data */
-    CLI_UTILS_DATA cliUtilsData;
-    /** pointer to the dispatch data */
-    CLI_DISPATCH_DATA cliDispatchData;
-    /** message bytes stored */
-    uint32_t cliBytesStored;
-
 } ADI_CLI_INFO;
-
-/**
- * @brief Gets the CLI information.
- * @return info of the CLI.
- */
-ADI_CLI_INFO *GetCliInfo(void);
 
 #ifdef __cplusplus
 }

@@ -66,6 +66,10 @@ typedef enum
     ADI_CLI_STATUS_COMM_ERROR,
     /** Buffer is full */
     ADI_CLI_STATUS_BUFFER_FULL,
+    /** Invalid command */
+    ADI_CLI_STATUS_INVALID_COMMAND,
+    /** Transmission in progress */
+    ADI_CLI_STATUS_TRANSMISSION_IN_PROGRESS,
 } ADI_CLI_STATUS;
 
 /** @} */

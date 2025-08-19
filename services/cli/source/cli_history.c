@@ -10,18 +10,12 @@
 
 /*==========================  I N C L U D E S   ==========================*/
 #include "cli_history.h"
-#include "adi_cli_private.h"
+#include "adi_cli_utility.h"
 #include "board_cfg.h"
-#include "cli_interface.h"
-#include "cli_utils.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*============= D E F I N E S =============*/
-
-/*========================== D A T A T Y P E S ==========================*/
 
 /*========================== P R O T O T Y P E S ==========================*/
 
@@ -30,17 +24,15 @@
  * @param[in] pCommand	- pointer to command
  * @return status - true or false
  */
-static bool HistoryCheckForDuplicate(const char *pCommand);
+static bool HistoryCheckForDuplicate(CLI_HISTORY_DATA *pHistory, const char *pCommand);
 
 /*==========================  D E F I N I T I O N S ==========================*/
 
-static bool HistoryCheckForDuplicate(const char *pCommand)
+static bool HistoryCheckForDuplicate(CLI_HISTORY_DATA *pInfo, const char *pCommand)
 {
     uint32_t recentIndex;
-    ADI_CLI_INFO *pCliInfo = GetCliInfo();
-    CLI_HISTORY_DATA *pInfo = &pCliInfo->cliHistData;
-    CLI_HISTORY *pHistory = &pInfo->history;
     bool status = false;
+    CLI_HISTORY *pHistory = &pInfo->history;
 
     /* If history file is empty then not a duplicate */
     if (pHistory->headIndex != pHistory->tailIndex)
@@ -59,16 +51,14 @@ static bool HistoryCheckForDuplicate(const char *pCommand)
     return status;
 }
 
-int32_t HistoryAppend(const char *pCommand)
+int32_t HistoryAppend(CLI_HISTORY_DATA *pInfo, const char *pCommand)
 {
-    ADI_CLI_INFO *pCliInfo = GetCliInfo();
-    CLI_HISTORY_DATA *pInfo = &pCliInfo->cliHistData;
-    CLI_HISTORY *pHistory = &pInfo->history;
     size_t commandSize = 0;
     /** Controls pointer adjustment */
     int32_t control = 0;
     /** API return status */
     int32_t status = HISTORY_SUCCESS;
+    CLI_HISTORY *pHistory = &pInfo->history;
 
     /* Trim leading and trailing whitespace, return if empty string */
     commandSize = TrimWhiteSpaces(pCommand, &pInfo->trimCommand[0]);
@@ -76,7 +66,7 @@ int32_t HistoryAppend(const char *pCommand)
     if (commandSize != 0)
     {
         /* Check if candidate is duplicate with most recent command history */
-        if (HistoryCheckForDuplicate(&pInfo->trimCommand[0]) == true)
+        if (HistoryCheckForDuplicate(pInfo, &pInfo->trimCommand[0]) == true)
         {
             /* Push pointer p to h because this candidate may have been
              * an up arrow (which lifted curIndex)
@@ -107,13 +97,11 @@ int32_t HistoryAppend(const char *pCommand)
     return status;
 }
 
-void HistoryInit(void)
+void HistoryInit(CLI_HISTORY_DATA *pInfo)
 {
-    ADI_CLI_INFO *pCliInfo = GetCliInfo();
-    CLI_HISTORY_DATA *pInfo = &pCliInfo->cliHistData;
-    CLI_HISTORY *pHistory = &pInfo->history;
     int32_t i = 0;
     int32_t j = 0;
+    CLI_HISTORY *pHistory = &pInfo->history;
     pHistory->headIndex = 0;
     pHistory->tailIndex = 0;
 
@@ -127,13 +115,10 @@ void HistoryInit(void)
     }
 }
 
-char *HistoryScrollUp()
+char *HistoryScrollUp(CLI_HISTORY_DATA *pInfo)
 {
-    ADI_CLI_INFO *pCliInfo = GetCliInfo();
-    CLI_HISTORY_DATA *pInfo = &pCliInfo->cliHistData;
-    CLI_HISTORY *pHistory = &pInfo->history;
-
     char *pCommand = NULL;
+    CLI_HISTORY *pHistory = &pInfo->history;
     /* Check for an earlier command line in the history file,
      * if not, return null
      */
@@ -151,12 +136,10 @@ char *HistoryScrollUp()
     return pCommand;
 }
 
-char *HistroyScrollDown()
+char *HistoryScrollDown(CLI_HISTORY_DATA *pInfo)
 {
-    ADI_CLI_INFO *pCliInfo = GetCliInfo();
-    CLI_HISTORY_DATA *pInfo = &pCliInfo->cliHistData;
-    CLI_HISTORY *pHistory = &pInfo->history;
     char *pCommand = NULL;
+    CLI_HISTORY *pHistory = &pInfo->history;
     /* Commands available/non-empty history list */
     if (pHistory->curIndex != pHistory->headIndex)
     {
@@ -176,9 +159,9 @@ char *HistroyScrollDown()
     return pCommand;
 }
 
-void HistoryFlush(void)
+void HistoryFlush(CLI_HISTORY_DATA *pInfo)
 {
-    HistoryInit();
+    HistoryInit(pInfo);
 }
 /**
  * @}

@@ -18,14 +18,20 @@
  *
  * @details
  * ## Overview
+ * The CLI Service provides a flexible interface for interacting with firmware via a command line.
+ * It supports asynchronous transmit/receive, command parsing, and dispatching to user-defined
+ * handlers.
  *
  * ## Typical API Usage
- * 1. **Create the CLI Instance**: Call `adi_cli_Create()` to allocate and initialize internal
- * resources.
- * 2. **Configure the CLI**: Populate an `ADI_CLI_CONFIG` structure with required function pointers.
- * 3. **Initialize the CLI**: Call `adi_cli_Init()` with the configuration structure.
- * 4. **Run the CLI Interface**: Periodically call `adi_cli_Interface()` to process input and
- * dispatch commands.
+ * 1. **Create the CLI Instance**: Use `adi_cli_Create()` to allocate and initialize the CLI
+ * service.
+ * 2. **Configure the CLI**: Fill an `ADI_CLI_CONFIG` structure with transmit/receive function
+ * pointers and context.
+ * 3. **Initialize the CLI**: Call `adi_cli_Init()` with the configuration to start the CLI.
+ * 4. **Process Commands**: Use `adi_cli_GetCmd()` to retrieve user input, then `adi_cli_Dispatch()`
+ * to execute commands.
+ * 5. **Handle Callbacks**: Use `adi_cli_RxCallback()` and `adi_cli_TxCallback()` in your
+ * communication event handlers.
  *
  * @{
  */
@@ -73,10 +79,6 @@ typedef struct
     ADI_CLI_TRANSMIT_ASYNC_FUNC pfTransmitAsync;
     /** Function pointer for asynchronous reception. */
     ADI_CLI_RECEIVE_ASYNC_FUNC pfReceiveAsync;
-    /** Function pointer to the command dispatch table. */
-    const Command *pDispatchTable;
-    /** Number of commands in the dispatch table. */
-    int32_t numRecords;
     /** User-defined handle for callback context. */
     void *hUser;
 
@@ -112,25 +114,16 @@ typedef struct
  */
 
 /**
- * @brief Initializes the CLI with the provided configuration.
- * @param[in] pConfig Pointer to the CLI configuration structure.
- * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
- */
-ADI_CLI_STATUS adi_cli_Init(ADI_CLI_CONFIG *pConfig);
-
-/**
  * @brief Creates and initializes the CLI service instance.
  * @details Allocates memory and sets up internal structures for the CLI service.
- *          Only a single instance is supported.
  *
- * @param[out] phCli           Pointer to the CLI handle location.
- * @param[in]  pStateMemory    Pointer to persistent state memory (must be 32-bit aligned).
- * @param[in]  stateMemorySize Size of the state memory in bytes (minimum:
- * #ADI_CLI_STATE_MEM_NUM_BYTES).
- * @param[in]  pTempMemory     Pointer to temporary memory (must be 32-bit aligned).
- * @param[in]  tempMemorySize  Size of the temporary memory in bytes (minimum:
- * #ADI_CLI_TEMP_MEM_NUM_BYTES).
+ * @param[out] phCli           - Pointer to the CLI handle location.
+ * @param[in]  pStateMemory    - Pointer to persistent state memory (must be 32-bit aligned).
+ * @param[in]  stateMemorySize - Size of the state memory in bytes (minimum:
+ *                                #ADI_CLI_STATE_MEM_NUM_BYTES).
+ * @param[in]  pTempMemory     - Pointer to temporary memory (must be 32-bit aligned).
+ * @param[in]  tempMemorySize  - Size of the temporary memory in bytes (minimum:
+ *                                #ADI_CLI_TEMP_MEM_NUM_BYTES).
  *
  * @return  #ADI_CLI_STATUS_SUCCESS on success,
  *          #ADI_CLI_STATUS_NULL_PTR if a pointer is NULL,
@@ -141,92 +134,86 @@ ADI_CLI_STATUS adi_cli_Create(ADI_CLI_HANDLE *phCli, void *pStateMemory, uint32_
                               void *pTempMemory, uint32_t tempMemorySize);
 
 /**
- * @brief Processes input, parses commands, and dispatches the appropriate handler.
- * @return Status code indicating the result of command execution.
+ * @brief Initializes the CLI Service and starts receiving data from the terminal.
+ * @details This function must be called after creating the CLI instance with `adi_cli_Create()`
+ * @param[in]  hCli    - Handle to the CLI instance.
+ * @param[in]  pConfig - Pointer to the CLI configuration structure.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_COMM_ERROR on communication error.
  */
-int32_t adi_cli_Interface(void);
+ADI_CLI_STATUS adi_cli_Init(ADI_CLI_HANDLE hCli, ADI_CLI_CONFIG *pConfig);
 
 /**
- * @brief Displays the CLI prompt, overwriting the current line.
- */
-void adi_cli_DisplayPrompt(void);
-
-/**
- * @brief Moves the cursor to the start of the line and prints a newline.
- */
-void adi_cli_NewLine(void);
-
-/**
- * @brief Retrieves a character from the communication interface.
+ * @brief Retrieves a command from the CLI input buffer.
+ * @param[in] hCli Handle to the CLI instance.
+ * @param[out] pCommand Pointer to the buffer where the command will be stored.
  * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
+ *          #ADI_CLI_STATUS_NULL_PTR if hCli or pCommand is NULL,
+ *          #ADI_CLI_STATUS_INVALID_COMMAND on invalid command.
  */
-int32_t adi_cli_GetChar(void);
+ADI_CLI_STATUS adi_cli_GetCmd(ADI_CLI_HANDLE hCli, char *pCommand);
 
 /**
- * @brief Sends a character through the communication interface.
- * @param[in] inputchar Character to transmit.
+ * @brief Dispatches a command to the appropriate function.
+ * @param[in] hCli           - Handle to the CLI instance.
+ * @param[in] pCommand       - Pointer to the command string.
+ * @param[in] pDispatchTable - Pointer to the command dispatch table.
+ * @param[in] numRecords     - Number of commands in the dispatch table.
  * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
+ *          #ADI_CLI_STATUS_NULL_PTR if hCli, pCommand or pDispatchTable is NULL,
+ *          #ADI_CLI_STATUS_INVALID_COMMAND on invalid command.
  */
-ADI_CLI_STATUS adi_cli_PutChar(char inputchar);
-
-/**
- * @brief Sends a string through the communication interface (non-blocking).
- * @param[in] pStr Pointer to the string.
- * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_BUFFER_FULL if the buffer is full,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
- */
-ADI_CLI_STATUS adi_cli_PutStringNb(const char *pStr);
-
-/**
- * @brief Sends a string through the communication interface (blocking).
- * @param[in] pStr Pointer to the string.
- * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_BUFFER_FULL if the buffer is full,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
- */
-ADI_CLI_STATUS adi_cli_PutString(const char *pStr);
-
-/**
- * @brief Sends a buffer through the communication interface.
- * @param[in] pData    Pointer to the buffer.
- * @param[in] numBytes Number of bytes to send.
- * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
- */
-ADI_CLI_STATUS adi_cli_PutBuffer(uint8_t *pData, uint32_t numBytes);
-
-/**
- * @brief Sends a string through the communication interface (non-blocking).
- * @param[in] pStr Pointer to the string.
- * @return  #ADI_CLI_STATUS_SUCCESS on success,
- *          #ADI_CLI_STATUS_COMM_ERROR on communication error.
- * @note This function is functionally similar to adi_cli_PutStringNb.
- */
-ADI_CLI_STATUS adi_cli_PutStringNonBlocking(char *pStr);
+ADI_CLI_STATUS adi_cli_Dispatch(ADI_CLI_HANDLE hCli, char *pCommand, const Command *pDispatchTable,
+                                int32_t numRecords);
 
 /**
  * @brief CLI receive callback handler.
  * @details Should be called by the user when a receive event occurs.
+ * @param[in]  hCli - Handle to the CLI instance.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
+ *             #ADI_CLI_STATUS_COMM_ERROR on communication error.
  */
-void adi_cli_RxCallback(void);
+ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli);
 
 /**
  * @brief CLI transmit callback handler.
  * @details Should be called by the user when a transmit event occurs.
+ * @param[in]  hCli - Handle to the CLI instance.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL.
+ *
  */
-void adi_cli_TxCallback(void);
+ADI_CLI_STATUS adi_cli_TxCallback(ADI_CLI_HANDLE hCli);
 
 /**
- * @brief Returns the number of bytes waiting to be processed from the communication interface.
- * @return Number of bytes pending in the receive buffer.
+ * @brief Flushes the CLI message buffer, ensuring all pending messages are transmitted.
+ * @param[in] hCli - Handle to the CLI instance.
+ * @return    #ADI_CLI_STATUS_SUCCESS on success,
+ *            #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
+ *            #ADI_CLI_STATUS_TRANSMISSION_IN_PROGRESS if a transmission is in progress.
+ *
  */
-int32_t adi_cli_GetNumCharsWaiting(void);
+ADI_CLI_STATUS adi_cli_FlushMessages(ADI_CLI_HANDLE hCli);
 
 /**
- * @details Stores the CLI message in the buffer.
+ * @brief Displays the prompt.
+ * @param[in] hCli - Handle to the CLI instance.
+ * @return    #ADI_CLI_STATUS_SUCCESS on success,
+ *            #ADI_CLI_STATUS_NULL_PTR if hCli is NULL.
+ */
+ADI_CLI_STATUS adi_cli_DisplayPrompt(ADI_CLI_HANDLE hCli);
+
+/**
+ * @brief Moves the cursor to the start of the line and prints a newline.
+ * @param[in] hCli - Handle to the CLI instance.
+ * @return    #ADI_CLI_STATUS_SUCCESS on success,
+ *            #ADI_CLI_STATUS_NULL_PTR if hCli is NULL.
+ */
+ADI_CLI_STATUS adi_cli_NewLine(ADI_CLI_HANDLE hCli);
+
+/**
+ * @details Stores the messages in the CLI buffer.
  * @param[in] pMsgType - Type of message to be printed
  * @param[in] pFormat  - Format specifier for the message
  * @return status      - SUCCESS - 0
@@ -235,19 +222,80 @@ int32_t adi_cli_GetNumCharsWaiting(void);
 int32_t adi_cli_PrintMessage(char *pMsgType, char *pFormat, ...);
 
 /**
- * @brief Flushes the CLI message buffer.
- * @details This function clears the message buffer, allowing new messages to be added.
- * @return 0 if the buffer is empty, 1 if the buffer is not empty.
- *
+ * @brief Gets the number of characters waiting in the CLI receive buffer.
+ * @param[in]  hCli      - Handle to the CLI instance.
+ * @param[out] pNumChars - Pointer to store the number of characters waiting.
+ * @return  #ADI_CLI_STATUS_SUCCESS on success,
+ *          #ADI_CLI_STATUS_NULL_PTR if hCli or pNumChars is NULL.
+ *          #ADI_CLI_STATUS_BUFFER_FULL if the buffer is full.
  */
-int32_t adi_cli_FlushMessages(void);
+ADI_CLI_STATUS adi_cli_GetNumCharsWaiting(ADI_CLI_HANDLE hCli, int32_t *pNumChars);
 
 /**
- * @brief Returns the number of bytes available in the CLI message buffer.
- * @return Number of bytes available in the CLI message buffer.
- *
+ * @brief Sets the handle for the terminal interface.
+ * @details This handle is required for storing messages in the CLI buffer. Before using message
+ * macros such as INFO_MSG, WARN_MSG, or ERROR_MSG, the user must call this function to set the CLI
+ * handle for terminal output.
+ * @param[in]  hCli - Handle to the CLI instance.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL.
  */
-uint32_t adi_cli_GetFreeMessageSpace(void);
+ADI_CLI_STATUS adi_cli_SetHandleTerminal(ADI_CLI_HANDLE hCli);
+
+/**
+ * @brief Retrieves a character from the circular buffer.
+ * @param[in]  hCli - Handle to the CLI instance.
+ * @param[out] pChar - Pointer to store the retrieved character.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_BUFFER_FULL on buffer full.
+ */
+ADI_CLI_STATUS adi_cli_GetChar(ADI_CLI_HANDLE hCli, int32_t *pChar);
+
+/**
+ * @brief Puts the character into the CLI buffer.
+ * @param[in]  hCli      - Handle to the CLI instance.
+ * @param[in]  inputchar - Character to transmit.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
+ */
+ADI_CLI_STATUS adi_cli_PutChar(ADI_CLI_HANDLE hCli, char inputchar);
+
+/**
+ * @brief Puts the string into the CLI buffer.
+ * @param[in]  hCli  - Handle to the CLI instance.
+ * @param[in]  pStr  - Pointer to the string.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
+ */
+ADI_CLI_STATUS adi_cli_PutString(ADI_CLI_HANDLE hCli, const char *pStr);
+
+/**
+ * @brief Puts a buffer into the CLI buffer.
+ * @param[in]  hCli     - Handle to the CLI instance.
+ * @param[in]  pData    - Pointer to the buffer.
+ * @param[in]  numBytes - Number of bytes to send.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
+ */
+ADI_CLI_STATUS adi_cli_PutBuffer(ADI_CLI_HANDLE hCli, uint8_t *pData, uint32_t numBytes);
+
+/**
+ * @brief Gets the number of bytes available in the CLI message buffer.
+ * @param[in]   hCli       - Handle to the CLI instance.
+ * @param[out]  pFreeSpace - Pointer to store the number of free bytes available.
+ * @return     #ADI_CLI_STATUS_SUCCESS on success,
+ *            #ADI_CLI_STATUS_NULL_PTR if hCli or pFreeSpace is NULL.
+ */
+ADI_CLI_STATUS adi_cli_GetFreeMessageSpace(ADI_CLI_HANDLE hCli, uint32_t *pFreeSpace);
+
+/**
+ * @brief Gets the handle for dispatching internal commands.
+ * @details This function returns a pointer to the CLI interface data structure used for dispatching
+ * internal (non-user) commands. This handle should not be used for user commands.
+ * @param[in]  hCli - Handle to the CLI instance.
+ * @return     Pointer to the CLI interface data structure, or NULL if hCli is NULL.
+ */
+void *GetHandleForDispatchCommands(ADI_CLI_HANDLE hCli);
 
 /** @} */
 

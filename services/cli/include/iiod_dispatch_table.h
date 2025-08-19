@@ -11,14 +11,112 @@
 #ifndef __IIOD_DISPATCH_TABLE_H__
 #define __IIOD_DISPATCH_TABLE_H__
 
-#include "cli_commands.h"
 #include "cli_dispatch.h"
-#include "cli_interface.h"
+#include "cli_private.h"
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief Command to display help.
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdHelp(Args *pArgs);
+
+/**
+ * @brief Command to exit the program.
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdExit(Args *pArgs);
+
+/**
+ * @brief Command to print the XML file.
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdPrint(Args *pArgs);
+
+/**
+ * @brief Command to print the Version
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdVersion(Args *pArgs);
+
+/**
+ * @brief Command to set the timeout
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdTimeout(Args *pArgs);
+
+/**
+ * @brief Command to Open the device
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdOpen(Args *pArgs);
+
+/**
+ * @brief Command to Close the device
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdClose(Args *pArgs);
+
+/**
+ * @brief Command to Read from a register
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdRead(Args *pArgs);
+
+/**
+ * @brief Command to Write to a register
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdWrite(Args *pArgs);
+
+/**
+ * @brief Command to Read from a buffer
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdReadBuf(Args *pArgs);
+
+/**
+ * @brief Command to Write to a buffer
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdWriteBuf(Args *pArgs);
+
+/**
+ * @brief Command to get the name of the trigger
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdGetTrig(Args *pArgs);
+
+/**
+ * @brief Command to set the trigger
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdSetTrig(Args *pArgs);
+
+/**
+ * @brief Command to set the number of kernel buffers
+ * @param pArgs - pointer to command arguments storage.
+ * @return 0 in case of success or negative value otherwise.
+ */
+int32_t CmdSet(Args *pArgs);
 
 /**
  * @brief Command dispatch table
@@ -43,9 +141,9 @@ static const Command dispatchTable[] = {
      "<device> <bytes_count>", NULL, NULL},
     {"writebuf", "ss", CmdWriteBuf, NOHIDE, "Write raw data to the specified device",
      "<device> <bytes_count>", NULL, NULL},
-    {"gettrig", "ss", CmdGetRig, NOHIDE, "Get the name of the trigger used by the specified device",
-     "<device>", NULL, NULL},
-    {"settrig", "sss", CmdSetRig, NOHIDE, "Set the trigger to use for the specified device",
+    {"gettrig", "ss", CmdGetTrig, NOHIDE,
+     "Get the name of the trigger used by the specified device", "<device>", NULL, NULL},
+    {"settrig", "sss", CmdSetTrig, NOHIDE, "Set the trigger to use for the specified device",
      "<device> [<trigger>]", NULL, NULL},
     // Isuue with the set command.
     {"set", "sss", CmdSet, NOHIDE, "Set the number of kernel buffers for the specified device",
