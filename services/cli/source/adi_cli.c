@@ -10,7 +10,6 @@
 /*==========================  I N C L U D E S   ==========================*/
 #include "adi_cli.h"
 #include "adi_cli_memory.h"
-#include "adi_cli_private.h"
 #include "adi_cli_status.h"
 #include "adi_cli_utility.h"
 #include "app_cfg.h"
@@ -110,9 +109,9 @@ ADI_CLI_STATUS adi_cli_Init(ADI_CLI_HANDLE hCli, ADI_CLI_CONFIG *pConfig)
     else
     {
         pConfig->hUser = pInfo;
-        pInfo->config = *pConfig;
-        status = pInfo->config.pfReceiveAsync(pInfo->config.hUser,
-                                              (char *)&pInfo->cliIfData.cliData.rxByte, 1);
+        pInfo->cliIfData.config = *pConfig;
+        status = pInfo->cliIfData.config.pfReceiveAsync(
+            pInfo->cliIfData.config.hUser, (char *)&pInfo->cliIfData.cliData.rxByte, 1);
         if (status != 0)
         {
             cliStatus = ADI_CLI_STATUS_COMM_ERROR;
@@ -174,7 +173,7 @@ ADI_CLI_STATUS adi_cli_Dispatch(ADI_CLI_HANDLE hCli, char *pCommand, const Comma
     return cliStatus;
 }
 
-ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli)
+ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli, uint8_t *pData, uint32_t numBytes)
 {
     int32_t status = 0;
     ADI_CLI_STATUS cliStatus = ADI_CLI_STATUS_SUCCESS;
@@ -187,8 +186,9 @@ ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli)
     else
     {
         pCliData = &pInfo->cliIfData.cliData;
-        ADICircBufWrite(pCliData->pRxBuff, &pCliData->rxByte, 1);
-        status = pInfo->config.pfReceiveAsync(pInfo->config.hUser, (char *)&pCliData->rxByte, 1);
+        ADICircBufWrite(pCliData->pRxBuff, pData, numBytes);
+        status = pInfo->cliIfData.config.pfReceiveAsync(pInfo->cliIfData.config.hUser,
+                                                        (char *)&pCliData->rxByte, 1);
         if (status != 0)
         {
             cliStatus = ADI_CLI_STATUS_COMM_ERROR;
@@ -227,9 +227,9 @@ ADI_CLI_STATUS adi_cli_FlushMessages(ADI_CLI_HANDLE hCli)
         if ((pInfo->cliIfData.bufferInfo.bytesStored > 0) && (pInfo->isTxComplete == true))
         {
             pInfo->isTxComplete = false;
-            status = pInfo->config.pfTransmitAsync(pInfo->config.hUser,
-                                                   pInfo->cliIfData.bufferInfo.pBufferToWrite,
-                                                   pInfo->cliIfData.bufferInfo.bytesStored);
+            status = pInfo->cliIfData.config.pfTransmitAsync(
+                pInfo->cliIfData.config.hUser, pInfo->cliIfData.bufferInfo.pBufferToWrite,
+                pInfo->cliIfData.bufferInfo.bytesStored);
 
             if (bufId == 0)
             {
@@ -247,6 +247,22 @@ ADI_CLI_STATUS adi_cli_FlushMessages(ADI_CLI_HANDLE hCli)
         {
             status = ADI_CLI_STATUS_TRANSMISSION_IN_PROGRESS;
         }
+    }
+    return status;
+}
+
+ADI_CLI_STATUS adi_cli_SetConfig(ADI_CLI_HANDLE hCli, ADI_CLI_CONFIG *pConfig)
+{
+    ADI_CLI_STATUS status = ADI_CLI_STATUS_SUCCESS;
+    ADI_CLI_INFO *pInfo = (ADI_CLI_INFO *)hCli;
+    if (hCli == NULL || pConfig == NULL)
+    {
+        status = ADI_CLI_STATUS_NULL_PTR;
+    }
+    else
+    {
+        pConfig->hUser = pInfo;
+        pInfo->cliIfData.config = *pConfig;
     }
     return status;
 }
@@ -502,7 +518,6 @@ static void IntialiseStateData(ADI_CLI_INFO *pInfo)
     pInfo->cliIfData.deferPrompt = false;
     pInfo->cliIfData.displayPrompt = false;
     pInfo->cliIfData.userIsTyping = false;
-    pInfo->cliIfData.displayCtrlChars = true;
     pInfo->isTxComplete = 1;
     pInfo->cliIfData.bufferInfo.bytesStored = 0;
     pInfo->cliIfData.bufferInfo.pBufferToWrite = &pInfo->cliBuffer0[0];

@@ -100,7 +100,7 @@ typedef enum
     /** Attribute type is int32_t */
     ADI_ATTR_TYPE_INT32 = 0,
     /** Attribute type is uint32_t */
-    ADI_TYPE_UINT32,
+    ADI_ATTR_TYPE_UINT32,
     /** Attribute type is float */
     ADI_ATTR_TYPE_FLOAT,
     /** Attribute type is uint8_t */

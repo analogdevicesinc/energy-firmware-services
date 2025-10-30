@@ -20,6 +20,7 @@
 
 /*============= I N C L U D E S =============*/
 #include "adi_cli_iiod_xml.h"
+#include "adi_evb.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -33,10 +34,10 @@
 #define XML_DESC_BUFFER_SIZE 8000
 
 /*============= D A T A =============*/
-
-static char dummybuffer[XML_DESC_BUFFER_SIZE];
-
-/** Macro to convert a number to a string */
+/**
+ * @brief Macro to convert a number to a string
+ * @param x The value to convert to string
+ */
 #define NO_OS_TOSTRING(x) #x
 
 /* Header for the xml file */
@@ -68,33 +69,34 @@ static char headerEnd[] = "</context>";
 
 /*============= L O C A L  F U N C T I O N S =============*/
 
-/*
- * Initialize the xml file for the IIO device.
- * @param desc - pointer to the IIO descriptor
- * @param pOutput - pointer to the output buffer
+/**
+ * @brief Initialize the xml file for the IIO device.
+ * @param pDesc pointer to the IIO descriptor
+ * @param pOutput pointer to the output buffer
  * @return 0 in case of success or negative value otherwise.
  */
 static int32_t InitXml(IioDesc *pDesc, char *pOutput);
 
-/*
- * Add device attributes into pDst. If size is 0, no data will be written to pDst but size will be
- * returned.
- * @param pDeviceAttribute - pointer to the device attributes
- * @param pName - name of the device
- * @param pDeviceId - id of the device
- * @param pDst - pointer to the buffer where the xml will be written
- * @param size - size of the buffer
+/**
+ * @brief Add device attributes into pDst. If size is 0, no data will be written to pDst but size
+ * will be returned.
+ * @param pDeviceAttribute pointer to the device attributes
+ * @param pName name of the device
+ * @param pDeviceId id of the device
+ * @param pDst pointer to the buffer where the xml will be written
+ * @param size size of the buffer
  * @return size of the xml
  */
 static uint32_t AddDeviceXml(DeviceAttributes *pDeviceAttribute, char *pName, char *pDeviceId,
                              uint32_t size, char *pDst);
 
-/*
- * Add channel attributes into pDst. If size is 0, no data will be written to pDst but size will be
- * returned.
- * @param pDeviceAttribute - pointer to the device attributes
- * @param size - size of the buffer
- * @param pDst - pointer to the buffer where the xml will be written
+/**
+ * @brief Add channel attributes into pDst. If size is 0, no data will be written to pDst but size
+ * will be returned.
+ * @param pDeviceAttribute pointer to the device attributes
+ * @param size size of the buffer
+ * @param pIndex pointer to the current index in the buffer
+ * @param pDst pointer to the buffer where the xml will be written
  * @return size of the xml
  */
 static uint32_t AddChannelXml(DeviceAttributes *pDeviceAttribute, uint32_t size, int32_t *pIndex,
@@ -102,12 +104,15 @@ static uint32_t AddChannelXml(DeviceAttributes *pDeviceAttribute, uint32_t size,
 
 /**
  * @brief Add context attributes into xml string buffer.
- * @param desc - IIo descriptor.
- * @param buff - xml buffer.
- * @param size - size of buffer
+ * @param pDesc IIO descriptor.
+ * @param pBuff xml buffer.
+ * @param size size of buffer
  * @return 0 in case of success or negative value otherwise.
  */
 static uint32_t AddCtxAttributeXml(IioDesc *pDesc, char *pBuff, uint32_t size);
+
+/** IIO response buffer */
+SECTION(DMA_BUFFER_2) static char dummybuffer[XML_DESC_BUFFER_SIZE];
 
 /*============= C O D E =============*/
 

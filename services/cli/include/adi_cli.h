@@ -79,6 +79,8 @@ typedef struct
     ADI_CLI_TRANSMIT_ASYNC_FUNC pfTransmitAsync;
     /** Function pointer for asynchronous reception. */
     ADI_CLI_RECEIVE_ASYNC_FUNC pfReceiveAsync;
+    /** Flag to enable or disable display of control characters. */
+    bool disableDisplayCtrlChars;
     /** User-defined handle for callback context. */
     void *hUser;
 
@@ -104,6 +106,11 @@ typedef struct
 #else
 #define DEBUG_MSG_RAW(...) NULL
 #endif
+
+/** @brief Maximum size (in bytes) for CLI buffer */
+#define ADI_CLI_MAX_SIZE (1024 * 10)
+/** @brief Maximum size (in bytes) for a message block */
+#define ADI_CLI_MAX_MSG_SIZE 512
 
 /** @} */
 
@@ -170,11 +177,13 @@ ADI_CLI_STATUS adi_cli_Dispatch(ADI_CLI_HANDLE hCli, char *pCommand, const Comma
  * @brief CLI receive callback handler.
  * @details Should be called by the user when a receive event occurs.
  * @param[in]  hCli - Handle to the CLI instance.
+ * @param[in]  pData - Pointer to the received data buffer.
+ * @param[in]  numBytes - Number of bytes received.
  * @return     #ADI_CLI_STATUS_SUCCESS on success,
  *             #ADI_CLI_STATUS_NULL_PTR if hCli is NULL,
  *             #ADI_CLI_STATUS_COMM_ERROR on communication error.
  */
-ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli);
+ADI_CLI_STATUS adi_cli_RxCallback(ADI_CLI_HANDLE hCli, uint8_t *pData, uint32_t numBytes);
 
 /**
  * @brief CLI transmit callback handler.
@@ -211,6 +220,15 @@ ADI_CLI_STATUS adi_cli_DisplayPrompt(ADI_CLI_HANDLE hCli);
  *            #ADI_CLI_STATUS_NULL_PTR if hCli is NULL.
  */
 ADI_CLI_STATUS adi_cli_NewLine(ADI_CLI_HANDLE hCli);
+
+/**
+ * @brief Sets the CLI configuration.
+ * @param[in] hCli - Handle to the CLI instance.
+ * @param[in] pConfig - Pointer to the CLI configuration structure.
+ * @return    #ADI_CLI_STATUS_SUCCESS on success,
+ *            #ADI_CLI_STATUS_NULL_PTR if hCli or pConfig is NULL.
+ */
+ADI_CLI_STATUS adi_cli_SetConfig(ADI_CLI_HANDLE hCli, ADI_CLI_CONFIG *pConfig);
 
 /**
  * @details Stores the messages in the CLI buffer.
