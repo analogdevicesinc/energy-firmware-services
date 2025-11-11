@@ -14,6 +14,7 @@
 /*============= I N C L U D E S =============*/
 
 #include "adi_circ_buf.h"
+#include "adi_cli.h"
 #include "app_cfg.h"
 #include "cli_dispatch.h"
 #include "cli_history.h"
@@ -132,8 +133,6 @@ typedef struct
     bool displayPrompt;
     /** Flag to indicate whether the user is currently entering a command */
     bool userIsTyping;
-    /** Flag to indicate whether the control characters to be printed or not */
-    bool displayCtrlChars;
     /** Holds current line buffers and pointers */
     EditLine editLine;
     /** Buffer info structure to hold current data buffer filling */
@@ -144,7 +143,32 @@ typedef struct
     CLI_HISTORY_DATA cliHistData;
     /** pointer to the dispatch data */
     CLI_DISPATCH_DATA cliDispatchData;
+    /** CLI configuration structure */
+    ADI_CLI_CONFIG config;
 } CLI_PRIVATE;
+
+/**
+ * CLI information structure
+ */
+typedef struct
+{
+    /** command line interface instance */
+    CLI_PRIVATE cliIfData;
+    /** ping buffer for the data transmission */
+    uint8_t cliBuffer0[ADI_CLI_MAX_SIZE];
+    /** pong buffer for the data transmission */
+    uint8_t cliBuffer1[ADI_CLI_MAX_SIZE];
+    /** pointer to the message string */
+    char *pMsgString;
+    /** pointer to the message string to copy */
+    char *pMsgStringToCopy;
+    /** Tx completion flag */
+    int32_t isTxComplete;
+    /** Pointer to temporary memory buffer */
+    uint8_t *pTempMemory;
+    /** Size of memory in (bytes) given to store temporary data */
+    uint32_t tempMemSize;
+} ADI_CLI_INFO;
 
 /*============= F U N C T I O N  P R O T O T Y P E S =============*/
 

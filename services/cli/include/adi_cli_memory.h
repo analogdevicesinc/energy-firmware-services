@@ -13,7 +13,7 @@
 #ifndef __ADI_CLI_MEMORY_H__
 #define __ADI_CLI_MEMORY_H__
 
-#include "adi_cli_private.h"
+#include "cli_private.h"
 #include <stdint.h>
 
 #ifdef __cplusplus

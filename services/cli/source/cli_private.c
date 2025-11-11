@@ -11,7 +11,6 @@
 /*==========================  I N C L U D E S   ==========================*/
 
 #include "cli_private.h"
-#include "adi_cli_private.h"
 #include "adi_cli_utility.h"
 #include "app_cfg.h"
 #include "cli_dispatch.h"
@@ -224,7 +223,6 @@ extern const InternalCommand internalDispatchTable[];
 int32_t CliInit(CLI_PRIVATE *pInfo)
 {
     int32_t status = 0;
-
     CliInsertControlChars(pInfo, CLI_CTRL_CLS);
     HistoryInit(&pInfo->cliHistData);
     CliDisplayPrompt(pInfo);
@@ -789,20 +787,19 @@ int32_t CliCmdEcho(void *pInfo, const Command *pDispatchRecord, Args *pArgs, int
         {
 
             pCliInfo->echo = true;
-            INFO_MSG("echo on")
+            if (pCliInfo->config.disableDisplayCtrlChars == false)
+            {
+                INFO_MSG("echo on")
+            }
         }
         else if (strcmp(pArgs->v[0].pS, "off") == 0)
         {
 
             pCliInfo->echo = false;
-            if (pArgs->c == 2)
+            if (pCliInfo->config.disableDisplayCtrlChars == false)
             {
-                if (strcmp(pArgs->v[1].pS, "off") == 0)
-                {
-                    pCliInfo->displayCtrlChars = false;
-                }
+                INFO_MSG("echo off")
             }
-            INFO_MSG("echo off")
         }
         else
         {
@@ -813,11 +810,17 @@ int32_t CliCmdEcho(void *pInfo, const Command *pDispatchRecord, Args *pArgs, int
     {
         if (pCliInfo->echo == true)
         {
-            INFO_MSG("echo on")
+            if (pCliInfo->config.disableDisplayCtrlChars == false)
+            {
+                INFO_MSG("echo on")
+            }
         }
         else
         {
-            INFO_MSG("echo off")
+            if (pCliInfo->config.disableDisplayCtrlChars == false)
+            {
+                INFO_MSG("echo off")
+            }
         }
     }
 
@@ -1103,7 +1106,7 @@ void CliDeleteCharAtCursor(CLI_PRIVATE *pInfo)
 
 void CliDisplayPrompt(CLI_PRIVATE *pInfo)
 {
-    if (pInfo->displayCtrlChars == true)
+    if (pInfo->config.disableDisplayCtrlChars == false)
     {
         CliInsertControlChars(pInfo, CLI_CTRL_CR);
         CliPutStringBold(pInfo, APP_CFG_CLI_PROMPT);
@@ -1114,7 +1117,7 @@ static int32_t CliInsertControlChars(CLI_PRIVATE *pInfo, int32_t ctrlFuncID)
 {
     int32_t status = 0;
     volatile bool echo = pInfo->echo;
-    if (pInfo->displayCtrlChars == true)
+    if (pInfo->config.disableDisplayCtrlChars == false)
     {
         switch (ctrlFuncID)
         {
